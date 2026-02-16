@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mico's Micro Farm Agile</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --sky-light: #e0f2fe;
+            --sky-blue: #0ea5e9;
+            --sky-deep: #0284c7;
+            --plant-light: #dcfce7;
+            --plant-green: #10b981;
+            --plant-dark: #059669;
+            --earth-cream: #fefce8;
+            --earth-tan: #fef3c7;
+            --sage: #84cc16;
+            --moss: #65a30d;
+            --ocean: #0891b2;
+            --forest: #14532d;
+            --coral: #f97316;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #cbd5e1;
+            --white: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--sky-light) 0%, var(--plant-light) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--white);
+            padding: 32px 40px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px var(--shadow);
+            border-left: 6px solid var(--sky-blue);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--sky-deep) 0%, var(--plant-green) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: var(--plant-light);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--plant-dark);
+            font-weight: 600;
+        }
+
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--plant-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: var(--white);
+            padding: 8px;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .tab {
+            padding: 14px 28px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background: var(--sky-light);
+            color: var(--sky-deep);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, var(--sky-blue) 0%, var(--plant-green) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .column {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            min-height: 400px;
+            box-shadow: 0 2px 15px var(--shadow);
+            border-top: 4px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .column.not-started {
+            border-top-color: var(--sky-blue);
+        }
+
+        .column.in-progress {
+            border-top-color: var(--sage);
+        }
+
+        .column.done {
+            border-top-color: var(--plant-green);
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .column-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .column-count {
+            background: var(--earth-tan);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .task-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 14px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            border: 2px solid var(--border);
+            border-left-width: 5px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .task-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .task-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .task-card.priority-high {
+            border-left-color: #dc2626;
+        }
+
+        .task-card.priority-medium {
+            border-left-color: var(--sage);
+        }
+
+        .task-card.priority-low {
+            border-left-color: var(--sky-blue);
+        }
+
+        .task-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .task-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .task-owner-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        .owner-trey { background: var(--forest); }
+        .owner-halie { background: var(--ocean); }
+        .owner-ricardo { background: var(--coral); }
+        .owner-team { background: var(--plant-green); }
+
+        .task-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .task-badge {
+            font-size: 11px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .urgency-this-week {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .urgency-next-week {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .urgency-this-month {
+            background: var(--sky-light);
+            color: var(--sky-deep);
+        }
+
+        .urgency-future {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+        }
+
+        .priority-badge {
+            font-size: 11px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .priority-medium {
+            background: #fef9c3;
+            color: #713f12;
+        }
+
+        .priority-low {
+            background: var(--plant-light);
+            color: var(--plant-dark);
+        }
+
+        .task-date {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .task-notes {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .add-task-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--white);
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .add-task-btn:hover {
+            border-color: var(--sky-blue);
+            color: var(--sky-blue);
+            background: var(--sky-light);
+        }
+
+        .timeline-view, .calendar-view, .vendors-view {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+
+        .timeline-section {
+            margin-bottom: 40px;
+        }
+
+        .timeline-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--plant-green);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timeline-tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .vendor-card {
+            background: linear-gradient(135deg, var(--sky-light) 0%, var(--plant-light) 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--plant-green);
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .vendor-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .vendor-info {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .vendor-info div {
+            margin-bottom: 6px;
+        }
+
+        .vendor-info strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 550px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 28px;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--sky-blue);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 32px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--sky-blue) 0%, var(--plant-green) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--earth-tan);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid var(--border);
+        }
+
+        .calendar-title {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--sky-deep) 0%, var(--plant-green) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+        }
+
+        .setup-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+            padding: 20px 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border-left: 4px solid #f97316;
+        }
+
+        .setup-banner h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #92400e;
+        }
+
+        .setup-banner p {
+            font-size: 14px;
+            color: #78350f;
+            line-height: 1.6;
+        }
+
+        .setup-banner code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXTytDXonkcj9A3XuzCeV1F4V-Sfa51Ug",
+            authDomain: "mico-s-micro-farm-agile.firebaseapp.com",
+            databaseURL: "https://mico-s-micro-farm-agile-default-rtdb.firebaseio.com",
+            projectId: "mico-s-micro-farm-agile",
+            storageBucket: "mico-s-micro-farm-agile.firebasestorage.app",
+            messagingSenderId: "899003989851",
+            appId: "1:899003989851:web:e47df3198e73640e22647e",
+            measurementId: "G-L3WMNTCW9G"
+        };
+
+        // Initialize Firebase (only if config is set)
+        let database = null;
+        let useFirebase = false;
+
+        if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                database = firebase.database();
+                useFirebase = true;
+            } catch (error) {
+                console.log("Firebase not configured, using local storage");
+            }
+        }
+
+        // Team members with their colors
+        const teamMembers = [
+            { id: 'trey', name: 'Trey', color: 'forest' },
+            { id: 'halie', name: 'Halie', color: 'ocean' },
+            { id: 'ricardo', name: 'Ricardo', color: 'coral' },
+            { id: 'team', name: 'Team', color: 'plant-green' }
+        ];
+
+        // Initial task data
+        const initialTasks = [
+            {
+                id: 1,
+                title: "Follow up with David Owen (OneSeason)",
+                status: "in-progress",
+                urgency: "this-week",
+                priority: "high",
+                dueDate: "2026-02-18",
+                notes: "Grow room specs & harvest estimates",
+                owner: "trey"
+            },
+            {
+                id: 2,
+                title: "Follow up with Tom Boothe (GreenDuct)",
+                status: "in-progress",
+                urgency: "this-week",
+                priority: "high",
+                dueDate: "2026-02-20",
+                notes: "Awaiting response for call",
+                owner: "trey"
+            },
+            {
+                id: 3,
+                title: "Draft RFP for fabric ducting vendors",
+                status: "not-started",
+                urgency: "next-week",
+                priority: "high",
+                dueDate: "2026-02-28",
+                notes: "Include CFD modeling requirements",
+                owner: "halie"
+            },
+            {
+                id: 4,
+                title: "Schedule Aubergine meeting",
+                status: "not-started",
+                urgency: "this-month",
+                priority: "high",
+                dueDate: "2026-03-08",
+                notes: "Need production timeline first",
+                owner: "trey"
+            },
+            {
+                id: 5,
+                title: "Develop sensor deployment spec",
+                status: "not-started",
+                urgency: "this-month",
+                priority: "medium",
+                dueDate: "2026-03-10",
+                notes: "For Phase 1 pilot",
+                owner: "ricardo"
+            },
+            {
+                id: 6,
+                title: "Obtain CFD modeling from vendors",
+                status: "not-started",
+                urgency: "this-month",
+                priority: "medium",
+                dueDate: "2026-03-30",
+                notes: "Compare 2-3 systems",
+                owner: "halie"
+            },
+            {
+                id: 7,
+                title: "Execute Phase 1 pilot (Bays 1-3)",
+                status: "not-started",
+                urgency: "future",
+                priority: "high",
+                dueDate: "2026-04-15",
+                notes: "Full sensor network",
+                owner: "team"
+            }
+        ];
+
+        const vendors = [
+            {
+                id: 1,
+                name: "David Owen",
+                company: "OneSeason Farmers",
+                role: "Grow room specs & harvest estimates",
+                status: "Email sent this morning",
+                email: "david@oneseason.com",
+                phone: ""
+            },
+            {
+                id: 2,
+                name: "Tom Boothe",
+                company: "GreenDuct",
+                role: "Regional Sales Manager",
+                status: "Email sent",
+                email: "tom@greenduct.com",
+                phone: ""
+            },
+            {
+                id: 3,
+                name: "Aubergine Owner",
+                company: "Aubergine Restaurant",
+                role: "16,000+ lbs/month partnership",
+                status: "Awaiting production timeline",
+                email: "",
+                phone: ""
+            }
+        ];
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('kanban');
+            const [tasks, setTasks] = useState([]);
+            const [showModal, setShowModal] = useState(false);
+            const [draggedTask, setDraggedTask] = useState(null);
+            const [synced, setSynced] = useState(false);
+
+            // Load tasks on mount
+            useEffect(() => {
+                if (useFirebase && database) {
+                    // Listen to Firebase
+                    const tasksRef = database.ref('tasks');
+                    tasksRef.on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            setTasks(Object.values(data));
+                            setSynced(true);
+                        } else {
+                            // Initialize with default tasks
+                            initialTasks.forEach(task => {
+                                database.ref('tasks/' + task.id).set(task);
+                            });
+                        }
+                    });
+
+                    return () => tasksRef.off();
+                } else {
+                    // Use localStorage as fallback
+                    const saved = localStorage.getItem('micosTasks');
+                    setTasks(saved ? JSON.parse(saved) : initialTasks);
+                }
+            }, []);
+
+            // Save to Firebase or localStorage
+            const saveTasks = (updatedTasks) => {
+                if (useFirebase && database) {
+                    updatedTasks.forEach(task => {
+                        database.ref('tasks/' + task.id).set(task);
+                    });
+                } else {
+                    localStorage.setItem('micosTasks', JSON.stringify(updatedTasks));
+                }
+                setTasks(updatedTasks);
+            };
+
+            const handleDragStart = (task) => {
+                setDraggedTask(task);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const handleDrop = (status) => {
+                if (draggedTask) {
+                    const updatedTasks = tasks.map(task =>
+                        task.id === draggedTask.id ? { ...task, status } : task
+                    );
+                    saveTasks(updatedTasks);
+                    setDraggedTask(null);
+                }
+            };
+
+            const addTask = (taskData) => {
+                const newTask = {
+                    ...taskData,
+                    id: Date.now(),
+                    status: 'not-started'
+                };
+                saveTasks([...tasks, newTask]);
+                setShowModal(false);
+            };
+
+            return (
+                <div className="app-container">
+                    {!useFirebase && (
+                        <div className="setup-banner">
+                            <h3>🔧 Firebase Setup Required for Team Collaboration</h3>
+                            <p>
+                                Currently running in single-user mode. To enable real-time collaboration with Halie and Ricardo, 
+                                you need to add your Firebase configuration. Instructions below! For now, you can use this locally 
+                                and it will save to your browser.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="header">
+                        <h1>🌱 Mico's Micro Farm Agile</h1>
+                        <div className="header-subtitle">
+                            Airflow Upgrade & Facility Optimization
+                            {useFirebase && synced && (
+                                <span className="sync-status">
+                                    <span className="sync-dot"></span>
+                                    Live Sync Active
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="tabs">
+                        <button
+                            className={`tab ${activeTab === 'kanban' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('kanban')}
+                        >
+                            📋 Kanban Board
+                        </button>
+                        <button
+                            className={`tab ${activeTab === 'timeline' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('timeline')}
+                        >
+                            📅 Sprint Timeline
+                        </button>
+                        <button
+                            className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('calendar')}
+                        >
+                            🗓️ Calendar
+                        </button>
+                        <button
+                            className={`tab ${activeTab === 'vendors' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('vendors')}
+                        >
+                            👥 Vendor Contacts
+                        </button>
+                    </div>
+
+                    {activeTab === 'kanban' && (
+                        <>
+                            <OwnerLegend />
+                            <KanbanBoard
+                                tasks={tasks}
+                                onDragStart={handleDragStart}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                onAddTask={() => setShowModal(true)}
+                            />
+                        </>
+                    )}
+
+                    {activeTab === 'timeline' && <TimelineView tasks={tasks} />}
+                    {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
+                    {activeTab === 'vendors' && <VendorsView vendors={vendors} />}
+
+                    {showModal && (
+                        <TaskModal
+                            onClose={() => setShowModal(false)}
+                            onSave={addTask}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        function OwnerLegend() {
+            return (
+                <div className="legend">
+                    {teamMembers.map(member => (
+                        <div key={member.id} className="legend-item">
+                            <div className={`legend-color owner-${member.id}`}></div>
+                            <span>{member.name}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function KanbanBoard({ tasks, onDragStart, onDragOver, onDrop, onAddTask }) {
+            const columns = [
+                { id: 'not-started', title: '📝 Not Started' },
+                { id: 'in-progress', title: '🚀 In Progress' },
+                { id: 'done', title: '✅ Done' }
+            ];
+
+            return (
+                <div className="kanban-board">
+                    {columns.map(column => (
+                        <div
+                            key={column.id}
+                            className={`column ${column.id}`}
+                            onDragOver={onDragOver}
+                            onDrop={() => onDrop(column.id)}
+                        >
+                            <div className="column-header">
+                                <div className="column-title">
+                                    {column.title}
+                                </div>
+                                <div className="column-count">
+                                    {tasks.filter(t => t.status === column.id).length}
+                                </div>
+                            </div>
+                            {tasks
+                                .filter(task => task.status === column.id)
+                                .map(task => (
+                                    <TaskCard
+                                        key={task.id}
+                                        task={task}
+                                        onDragStart={() => onDragStart(task)}
+                                    />
+                                ))}
+                            {column.id === 'not-started' && (
+                                <button className="add-task-btn" onClick={onAddTask}>
+                                    + Add Task
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function TaskCard({ task, onDragStart }) {
+            const owner = teamMembers.find(m => m.id === task.owner);
+            
+            return (
+                <div
+                    className={`task-card priority-${task.priority}`}
+                    draggable
+                    onDragStart={onDragStart}
+                >
+                    <div className="task-header">
+                        <div className="task-title">{task.title}</div>
+                        {owner && (
+                            <div className={`task-owner-badge owner-${owner.id}`}>
+                                {owner.name}
+                            </div>
+                        )}
+                    </div>
+                    <div className="task-meta">
+                        <span className={`task-badge urgency-${task.urgency}`}>
+                            {task.urgency.replace('-', ' ')}
+                        </span>
+                        <span className={`priority-badge priority-${task.priority}`}>
+                            {task.priority}
+                        </span>
+                        {task.dueDate && (
+                            <span className="task-date">📅 {task.dueDate}</span>
+                        )}
+                    </div>
+                    {task.notes && (
+                        <div className="task-notes">
+                            {task.notes}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function TimelineView({ tasks }) {
+            const sections = [
+                { id: 'this-week', title: '🔥 This Week', urgency: 'this-week' },
+                { id: 'next-week', title: '⏭️ Next Week', urgency: 'next-week' },
+                { id: 'this-month', title: '📆 This Month', urgency: 'this-month' },
+                { id: 'future', title: '🔮 Future', urgency: 'future' }
+            ];
+
+            return (
+                <div className="timeline-view">
+                    <OwnerLegend />
+                    {sections.map(section => (
+                        <div key={section.id} className="timeline-section">
+                            <div className="timeline-title">{section.title}</div>
+                            <div className="timeline-tasks">
+                                {tasks
+                                    .filter(task => task.urgency === section.urgency)
+                                    .map(task => (
+                                        <TaskCard key={task.id} task={task} />
+                                    ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function CalendarView({ tasks }) {
+            const today = new Date();
+            
+            return (
+                <div className="calendar-view">
+                    <div className="calendar-header">
+                        <div className="calendar-title">
+                            {today.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </div>
+                    </div>
+                    <OwnerLegend />
+                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px', marginTop: '20px' }}>
+                        Tasks with deadlines sorted by due date
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {tasks
+                            .filter(task => task.dueDate)
+                            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+                            .map(task => (
+                                <TaskCard key={task.id} task={task} />
+                            ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function VendorsView({ vendors }) {
+            return (
+                <div className="vendors-view">
+                    <h2 style={{ marginBottom: '28px', fontSize: '28px', fontWeight: '700' }}>🤝 Vendor Contacts</h2>
+                    {vendors.map(vendor => (
+                        <div key={vendor.id} className="vendor-card">
+                            <div className="vendor-name">{vendor.name}</div>
+                            <div className="vendor-info">
+                                <div><strong>Company:</strong> {vendor.company}</div>
+                                <div><strong>Role:</strong> {vendor.role}</div>
+                                <div><strong>Status:</strong> {vendor.status}</div>
+                                {vendor.email && <div><strong>Email:</strong> {vendor.email}</div>}
+                                {vendor.phone && <div><strong>Phone:</strong> {vendor.phone}</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function TaskModal({ onClose, onSave }) {
+            const [formData, setFormData] = useState({
+                title: '',
+                urgency: 'this-week',
+                priority: 'medium',
+                dueDate: '',
+                notes: '',
+                owner: 'trey'
+            });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave(formData);
+            };
+
+            return (
+                <div className="modal" onClick={onClose}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="modal-title">Add New Task</h2>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Task Title</label>
+                                <input
+                                    className="form-input"
+                                    type="text"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Task Owner</label>
+                                <select
+                                    className="form-select"
+                                    value={formData.owner}
+                                    onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+                                >
+                                    {teamMembers.map(member => (
+                                        <option key={member.id} value={member.id}>{member.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Urgency</label>
+                                <select
+                                    className="form-select"
+                                    value={formData.urgency}
+                                    onChange={(e) => setFormData({ ...formData, urgency: e.target.value })}
+                                >
+                                    <option value="this-week">This Week</option>
+                                    <option value="next-week">Next Week</option>
+                                    <option value="this-month">This Month</option>
+                                    <option value="future">Future</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Priority</label>
+                                <select
+                                    className="form-select"
+                                    value={formData.priority}
+                                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                                >
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Due Date</label>
+                                <input
+                                    className="form-input"
+                                    type="date"
+                                    value={formData.dueDate}
+                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Notes</label>
+                                <textarea
+                                    className="form-textarea"
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    placeholder="Add any additional details..."
+                                />
+                            </div>
+                            <div className="form-actions">
+                                <button type="button" className="btn btn-secondary" onClick={onClose}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary">
+                                    Add Task
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+
+    <!-- 
+    ============================================
+    FIREBASE SETUP INSTRUCTIONS
+    ============================================
+    
+    1. Go to https://console.firebase.google.com/
+    2. Click "Add project" or select existing
+    3. Enable "Realtime Database" in Build menu
+    4. Set security rules to:
+       {
+         "rules": {
+           "tasks": {
+             ".read": true,
+             ".write": true
+           }
+         }
+       }
+    5. Go to Project Settings > Your apps
+    6. Click "Web app" icon to register app
+    7. Copy the firebaseConfig object
+    8. Replace the firebaseConfig above (line ~470) with your actual config
+    
+    Once configured, the banner will disappear and everyone 
+    with this file will see live updates!
+    -->
+</body>
+</html>
